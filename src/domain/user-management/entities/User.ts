@@ -87,7 +87,8 @@ export class User {
   }
 
   updateEmail(email: string): void {
-    if (!email || !User.isValidEmail(email)) throw new Error('Invalid email format');
+    if (!email) throw new Error('Email cannot be empty');
+    if (!User.isValidEmail(email)) throw new Error('Invalid email format');
     this._email = email;
   }
 
@@ -124,7 +125,8 @@ export class User {
 
   // Utility methods
   private static isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // More comprehensive email validation
+    const emailRegex = /^(?!.*\.\.)[a-zA-Z0-9](?:[a-zA-Z0-9._%+-]*[a-zA-Z0-9])?@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return emailRegex.test(email);
   }
 

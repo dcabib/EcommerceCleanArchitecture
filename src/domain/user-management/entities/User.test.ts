@@ -54,16 +54,24 @@ describe('User Entity', () => {
     });
 
     it('should throw error for missing required fields', () => {
-      expect(() => {
-        User.create(
-          '',
-          validUserData.username,
-          validUserData.email,
-          validUserData.passwordHash,
-          validUserData.billingAddress,
-          validUserData.phoneNumber
-        );
-      }).toThrow('User ID is required');
+      // Test each required field
+      expect(() => User.create('', validUserData.username, validUserData.email, validUserData.passwordHash, validUserData.billingAddress, validUserData.phoneNumber))
+        .toThrow('User ID is required');
+      
+      expect(() => User.create(validUserData.userId, '', validUserData.email, validUserData.passwordHash, validUserData.billingAddress, validUserData.phoneNumber))
+        .toThrow('Username is required');
+      
+      expect(() => User.create(validUserData.userId, validUserData.username, '', validUserData.passwordHash, validUserData.billingAddress, validUserData.phoneNumber))
+        .toThrow('Email is required');
+      
+      expect(() => User.create(validUserData.userId, validUserData.username, validUserData.email, '', validUserData.billingAddress, validUserData.phoneNumber))
+        .toThrow('Password hash is required');
+      
+      expect(() => User.create(validUserData.userId, validUserData.username, validUserData.email, validUserData.passwordHash, null as any, validUserData.phoneNumber))
+        .toThrow('Billing address is required');
+      
+      expect(() => User.create(validUserData.userId, validUserData.username, validUserData.email, validUserData.passwordHash, validUserData.billingAddress, ''))
+        .toThrow('Phone number is required');
     });
   });
 
@@ -105,6 +113,36 @@ describe('User Entity', () => {
       }).toThrow('Invalid email format');
     });
 
+    it('should throw error for empty email', () => {
+      expect(() => {
+        user.updateEmail('');
+      }).toThrow('Email cannot be empty');
+    });
+
+    it('should update password hash', () => {
+      const newHash = 'newhash123';
+      user.updatePasswordHash(newHash);
+      expect(user['_passwordHash']).toBe(newHash);
+    });
+
+    it('should throw error for empty password hash', () => {
+      expect(() => {
+        user.updatePasswordHash('');
+      }).toThrow('Password hash cannot be empty');
+    });
+
+    it('should update phone number', () => {
+      const newPhone = '9876543210';
+      user.updatePhoneNumber(newPhone);
+      expect(user.phoneNumber).toBe(newPhone);
+    });
+
+    it('should throw error for empty phone number', () => {
+      expect(() => {
+        user.updatePhoneNumber('');
+      }).toThrow('Phone number cannot be empty');
+    });
+
     it('should update billing address', () => {
       const newAddress: Address = {
         street: '456 Oak St',
@@ -115,6 +153,12 @@ describe('User Entity', () => {
       };
       user.updateBillingAddress(newAddress);
       expect(user.billingAddress).toEqual(newAddress);
+    });
+
+    it('should throw error for null billing address', () => {
+      expect(() => {
+        user.updateBillingAddress(null as any);
+      }).toThrow('Billing address cannot be empty');
     });
 
     it('should update role', () => {
@@ -150,6 +194,12 @@ describe('User Entity', () => {
       expect(user.shippingAddresses[0]).toEqual(newAddress);
     });
 
+    it('should throw error for null shipping address', () => {
+      expect(() => {
+        user.addShippingAddress(null as any);
+      }).toThrow('Shipping address cannot be empty');
+    });
+
     it('should remove shipping address', () => {
       const address1: Address = {
         street: '789 Pine St',
@@ -179,6 +229,99 @@ describe('User Entity', () => {
       expect(() => {
         user.removeShippingAddress(0);
       }).toThrow('Invalid shipping address index');
+
+      expect(() => {
+        user.removeShippingAddress(-1);
+      }).toThrow('Invalid shipping address index');
+
+      const address: Address = {
+        street: '789 Pine St',
+        city: 'Chicago',
+        state: 'IL',
+        postalCode: '60601',
+        country: 'USA'
+      };
+      user.addShippingAddress(address);
+
+      expect(() => {
+        user.removeShippingAddress(1);
+      }).toThrow('Invalid shipping address index');
+    });
+  });
+
+  describe('Email Validation - valid emails ', () => {
+    it('should validate various email formats', () => {
+      const validEmails = [
+        'test@example.com',
+        'test.name@example.com',
+        'test+label@example.com',
+        'test@subdomain.example.com',
+        'test@example.co.uk',
+        '123@example.com',
+        'test_name@example.com'
+      ];
+
+      // Valid emails should not throw errors
+      validEmails.forEach(email => {
+        expect(() => {
+          console.log ("validEmails: *********: " + email);
+
+          User.create(
+            validUserData.userId,
+            validUserData.username,
+            email,
+            validUserData.passwordHash,
+            validUserData.billingAddress,
+            validUserData.phoneNumber
+          );
+        }).not.toThrow();
+      });
+    });
+  });
+
+  describe('Email Validation - invalid emails', () => {
+    it('should validate various email formats', () => {
+
+      const invalidEmails = [
+        '',
+        '@example.com',
+        'test@',
+        'test@.com',
+        'test@example.',
+        'test@exam ple.com',
+        'test@example..com',
+        '.test@example.com',
+        'test.@example.com',
+        'test..name@example.com'
+      ];
+
+      const invalidEmailsWithoutNull = [
+        '@example.com',
+        'test@',
+        'test@.com',
+        'test@example.',
+        'test@exam ple.com',
+        'test@example..com',
+        '.test@example.com',
+        'test.@example.com',
+        'test..name@example.com'
+      ];
+
+      // Invalid emails should throw errors
+      invalidEmailsWithoutNull.forEach(email => {
+        expect(() => {
+          console.log ("invalidEmailsWithoutNull *********: " + email);
+
+          User.create(
+            validUserData.userId,
+            validUserData.username,
+            email,
+            validUserData.passwordHash,
+            validUserData.billingAddress,
+            validUserData.phoneNumber
+          );
+        }).toThrow('Invalid email format');
+      });
     });
   });
 
@@ -228,6 +371,19 @@ describe('User Entity', () => {
       expect(clone.phoneNumber).toBe(user.phoneNumber);
       expect(clone.role).toBe(user.role);
       expect(clone.shippingAddresses).toEqual(user.shippingAddresses);
+
+      // Test deep cloning of addresses
+      const shippingAddress: Address = {
+        street: '789 Pine St',
+        city: 'Chicago',
+        state: 'IL',
+        postalCode: '60601',
+        country: 'USA'
+      };
+      user.addShippingAddress(shippingAddress);
+      const cloneWithAddress = user.clone();
+      expect(cloneWithAddress.shippingAddresses[0]).toEqual(shippingAddress);
+      expect(cloneWithAddress.shippingAddresses[0]).not.toBe(shippingAddress);
     });
   });
 });
