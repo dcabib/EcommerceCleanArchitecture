@@ -52,6 +52,63 @@ A robust e-commerce application built using Clean Architecture principles in Typ
 - **Entities**: Warehouse, ProductWarehouseStock
 - **Key Features**: Inventory management, stock tracking
 
+## Business Rules
+
+### User Management
+- Users must have a unique email address
+- Passwords must be at least 8 characters long with a mix of letters, numbers, and symbols
+- User roles determine access levels and permissions
+- Users can have multiple roles
+- Admin role has full system access
+- Customer role has limited access to order management and profile updates
+
+### Product Catalog
+- Products must have a unique SKU
+- Product price cannot be negative
+- Products must belong to at least one category
+- Product stock levels must be non-negative
+- Products can be marked as active/inactive
+- Categories can have subcategories up to 3 levels deep
+
+### Order Processing
+- Orders must be associated with a registered user
+- Order total must be calculated from product prices and quantities
+- Orders cannot contain out-of-stock products
+- Orders must have a valid shipping address
+- Order status transitions must follow defined workflow:
+  1. Created → Pending Payment
+  2. Pending Payment → Paid/Cancelled
+  3. Paid → Processing
+  4. Processing → Shipped/Cancelled
+  5. Shipped → Delivered
+
+### Payment Processing
+- Payment amount must match order total
+- Payment status must be tracked (Pending, Completed, Failed, Refunded)
+- Failed payments must trigger order status update
+- Refunds can only be processed for completed payments
+- Payment methods must be validated before processing
+
+### Shipment Delivery
+- Shipment must be linked to a paid order
+- Shipping address must be validated
+- Tracking number must be generated for each shipment
+- Delivery updates must be logged with timestamps
+- Multiple shipments can be created for a single order
+- Shipping rates must be calculated based on:
+  - Package weight
+  - Delivery distance
+  - Shipping method
+
+### Warehouse Management
+- Each product must be assigned to at least one warehouse
+- Stock levels must be updated in real-time
+- Low stock alerts must be triggered at defined thresholds
+- Stock transfers between warehouses must be tracked
+- Stock counts must be reconciled periodically
+- FIFO (First In, First Out) principle for perishable items
+- Minimum and maximum stock levels must be maintained
+
 ## Entity Relationships
 
 ```
