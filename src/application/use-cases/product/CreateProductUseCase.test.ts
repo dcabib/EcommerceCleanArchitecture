@@ -1,6 +1,6 @@
 import { CreateProductUseCase, CreateProductDTO } from './CreateProductUseCase';
-import { IProductRepository } from '../../../domain/product-catalog/repositories/IProductRepository';
-import { Product } from '../../../domain/product-catalog/entities/Product';
+import { IProductRepository } from '../../../domain/product/repositories/IProductRepository';
+import { Product } from '../../../domain/product/entities/Product';
 
 describe('CreateProductUseCase', () => {
   // Mock implementations

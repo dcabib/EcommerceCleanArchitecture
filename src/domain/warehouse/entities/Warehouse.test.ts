@@ -107,6 +107,34 @@ describe('Warehouse Entity', () => {
       expect(warehouse.location).toEqual(newLocation);
     });
 
+    it('should throw error for invalid location updates', () => {
+      // Test null location
+      expect(() => {
+        warehouse.updateLocation(null as any);
+      }).toThrow('Location cannot be empty');
+
+      // Test missing fields
+      expect(() => {
+        warehouse.updateLocation({ ...validLocation, street: '' });
+      }).toThrow('Street is required');
+
+      expect(() => {
+        warehouse.updateLocation({ ...validLocation, city: '' });
+      }).toThrow('City is required');
+
+      expect(() => {
+        warehouse.updateLocation({ ...validLocation, state: '' });
+      }).toThrow('State is required');
+
+      expect(() => {
+        warehouse.updateLocation({ ...validLocation, postalCode: '' });
+      }).toThrow('Postal code is required');
+
+      expect(() => {
+        warehouse.updateLocation({ ...validLocation, country: '' });
+      }).toThrow('Country is required');
+    });
+
     it('should update capacity', () => {
       const newCapacity = 2000;
       warehouse.updateCapacity(newCapacity);
@@ -119,11 +147,11 @@ describe('Warehouse Entity', () => {
       }).toThrow('Warehouse name cannot be empty');
 
       expect(() => {
-        warehouse.updateLocation({ ...validLocation, street: '' });
-      }).toThrow('Street is required');
+        warehouse.updateCapacity(0);
+      }).toThrow('Capacity must be greater than zero');
 
       expect(() => {
-        warehouse.updateCapacity(0);
+        warehouse.updateCapacity(-1);
       }).toThrow('Capacity must be greater than zero');
     });
   });
@@ -158,14 +186,39 @@ describe('Warehouse Entity', () => {
       expect(warehouse.equals(differentWarehouse)).toBe(false);
     });
 
-    it('should clone warehouse correctly', () => {
+    it('should clone warehouse correctly with deep copy', () => {
       const clone = warehouse.clone();
 
-      expect(clone).not.toBe(warehouse); // Different instance
+      // Test instance independence
+      expect(clone).not.toBe(warehouse);
       expect(clone.warehouseId).toBe(warehouse.warehouseId);
       expect(clone.name).toBe(warehouse.name);
-      expect(clone.location).toEqual(warehouse.location);
       expect(clone.capacity).toBe(warehouse.capacity);
+
+      // Test deep copy of location
+      expect(clone.location).toEqual(warehouse.location);
+      expect(clone.location).not.toBe(warehouse.location);
+
+      // Get initial references
+      const originalLocation = { ...warehouse.location };
+      const locationBeforeChange = clone.location;
+      
+      // Modify the cloned warehouse's location
+      clone.updateLocation({
+        ...locationBeforeChange,
+        street: 'Modified Street'
+      });
+
+      // Verify modifications don't affect original
+      expect(clone.location.street).toBe('Modified Street');
+      expect(warehouse.location.street).toBe('123 Storage St');
+      expect(warehouse.location).toEqual(originalLocation);
+    });
+
+    it('should maintain location immutability', () => {
+      const location = warehouse.location;
+      location.street = 'Modified Street';
+      expect(warehouse.location.street).toBe(validLocation.street);
     });
   });
 });

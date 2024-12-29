@@ -39,16 +39,16 @@ export class Order {
     // Calculate total after item discounts
     const totalAfterItemDiscounts = Order.calculateTotalAfterItemDiscounts(items);
     
-    console.log('Debug - create:', {
-      roundedDiscountAmount,
-      totalAfterItemDiscounts,
-      items: items.map(item => ({
-        quantity: item.quantity,
-        price: item.priceAtPurchase,
-        itemDiscount: item.discountAmount,
-        subtotal: item.priceAtPurchase * item.quantity
-      }))
-    });
+    // console.log('Debug - create:', {
+    //   roundedDiscountAmount,
+    //   totalAfterItemDiscounts,
+    //   items: items.map(item => ({
+    //     quantity: item.quantity,
+    //     price: item.priceAtPurchase,
+    //     itemDiscount: item.discountAmount,
+    //     subtotal: item.priceAtPurchase * item.quantity
+    //   }))
+    // });
     
     // Validate order discount against total after item discounts
     if (roundedDiscountAmount > totalAfterItemDiscounts) {
@@ -127,15 +127,29 @@ export class Order {
     if (!this.canModifyItems()) {
       throw new Error('Cannot modify items in current order status');
     }
+
     const initialLength = this._items.length;
-    this._items = this._items.filter(item => item.orderItemId !== orderItemId);
-    if (this._items.length === initialLength) {
+    const itemToRemove = this._items.find(item => item.orderItemId === orderItemId);
+    
+    if (!itemToRemove) {
       throw new Error('Item not found in order');
     }
-    if (this._items.length === 0) {
+    
+    if (initialLength === 1) {
       throw new Error('Cannot remove last item from order');
     }
-    this.validateOrderDiscount();
+
+    // Calculate new total after removing item
+    const newItems = this._items.filter(item => item.orderItemId !== orderItemId);
+    const newTotal = Order.calculateTotalAfterItemDiscounts(newItems);
+    
+    // Validate discount against new total before removing item
+    if (this._orderDiscount > newTotal) {
+      throw new Error('Discount amount cannot be greater than total amount');
+    }
+    
+    // If validation passes, update items
+    this._items = newItems;
   }
 
   updateItemQuantity(orderItemId: string, newQuantity: number): void {
@@ -165,16 +179,16 @@ export class Order {
     // Calculate total after item discounts
     const totalAfterItemDiscounts = Order.calculateTotalAfterItemDiscounts(this._items);
     
-    console.log('Debug - updateDiscountAmount:', {
-      roundedAmount,
-      totalAfterItemDiscounts,
-      items: this._items.map(item => ({
-        quantity: item.quantity,
-        price: item.priceAtPurchase,
-        itemDiscount: item.discountAmount,
-        subtotal: item.priceAtPurchase * item.quantity
-      }))
-    });
+    // console.log('Debug - updateDiscountAmount:', {
+    //   roundedAmount,
+    //   totalAfterItemDiscounts,
+    //   items: this._items.map(item => ({
+    //     quantity: item.quantity,
+    //     price: item.priceAtPurchase,
+    //     itemDiscount: item.discountAmount,
+    //     subtotal: item.priceAtPurchase * item.quantity
+    //   }))
+    // });
     
     // Validate order discount against total after item discounts
     if (roundedAmount > totalAfterItemDiscounts) {
@@ -213,17 +227,17 @@ export class Order {
     const itemDiscounts = Order.calculateItemDiscountsTotal(items);
     const total = Order.round(subtotal - itemDiscounts);
     
-    console.log('Debug - calculateTotalAfterItemDiscounts:', {
-      subtotal,
-      itemDiscounts,
-      total,
-      items: items.map(item => ({
-        quantity: item.quantity,
-        price: item.priceAtPurchase,
-        itemDiscount: item.discountAmount,
-        subtotal: item.priceAtPurchase * item.quantity
-      }))
-    });
+    // console.log('Debug - calculateTotalAfterItemDiscounts:', {
+    //   subtotal,
+    //   itemDiscounts,
+    //   total,
+    //   items: items.map(item => ({
+    //     quantity: item.quantity,
+    //     price: item.priceAtPurchase,
+    //     itemDiscount: item.discountAmount,
+    //     subtotal: item.priceAtPurchase * item.quantity
+    //   }))
+    // });
     
     return total;
   }

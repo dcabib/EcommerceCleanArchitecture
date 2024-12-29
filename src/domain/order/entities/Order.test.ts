@@ -64,6 +64,17 @@ describe('Order Entity', () => {
       }).toThrow('Order must contain at least one item');
     });
 
+    it('should throw error for negative discount amount', () => {
+      expect(() => {
+        Order.create(
+          validOrderData.orderId,
+          validOrderData.userId,
+          validOrderData.items,
+          -10
+        );
+      }).toThrow('Discount amount cannot be negative');
+    });
+
     it('should throw error if discount amount exceeds total', () => {
       expect(() => {
         Order.create(
@@ -128,6 +139,22 @@ describe('Order Entity', () => {
         order.updateStatus('Cancelled');
       }).toThrow('Invalid status transition from Delivered to Cancelled');
     });
+
+    it('should not allow transitions from Cancelled state', () => {
+      order.updateStatus('Cancelled');
+      
+      expect(() => {
+        order.updateStatus('Confirmed');
+      }).toThrow('Invalid status transition from Cancelled to Confirmed');
+      
+      expect(() => {
+        order.updateStatus('Processing');
+      }).toThrow('Invalid status transition from Cancelled to Processing');
+      
+      expect(() => {
+        order.updateStatus('Delivered');
+      }).toThrow('Invalid status transition from Cancelled to Delivered');
+    });
   });
 
   describe('Item Management', () => {
@@ -181,6 +208,19 @@ describe('Order Entity', () => {
       expect(() => {
         order.removeItem(validOrderItem.orderItemId);
       }).toThrow('Cannot remove last item from order');
+    });
+
+    it('should throw error when removing item in non-Pending status', () => {
+      const secondItem: OrderItem = {
+        ...validOrderItem,
+        orderItemId: 'item-456'
+      };
+      order.addItem(secondItem);
+      order.updateStatus('Confirmed');
+
+      expect(() => {
+        order.removeItem(secondItem.orderItemId);
+      }).toThrow('Cannot modify items in current order status');
     });
 
     it('should update item quantity and recalculate total', () => {

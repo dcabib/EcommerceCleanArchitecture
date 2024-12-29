@@ -43,7 +43,7 @@ export class Warehouse {
   }
 
   get location(): Location {
-    return { ...this._location };
+    return JSON.parse(JSON.stringify(this._location));
   }
 
   get capacity(): number {
@@ -81,7 +81,7 @@ export class Warehouse {
     return new Warehouse(
       this._warehouseId,
       this._name,
-      { ...this._location },
+      JSON.parse(JSON.stringify(this._location)),
       this._capacity
     );
   }

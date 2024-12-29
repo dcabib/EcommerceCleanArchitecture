@@ -1,8 +1,8 @@
-import { Order, OrderItem } from '../../../domain/order-processing/entities/Order';
-import { IOrderRepository } from '../../../domain/order-processing/repositories/IOrderRepository';
-import { IUserRepository } from '../../../domain/user-management/repositories/IUserRepository';
-import { IProductRepository } from '../../../domain/product-catalog/repositories/IProductRepository';
-import { Product } from '../../../domain/product-catalog/entities/Product';
+import { Order, OrderItem } from '../../../domain/order/entities/Order';
+import { IOrderRepository } from '../../../domain/order/repositories/IOrderRepository';
+import { IUserRepository } from '../../../domain/user/repositories/IUserRepository';
+import { IProductRepository } from '../../../domain/product/repositories/IProductRepository';
+import { Product } from '../../../domain/product/entities/Product';
 
 export interface OrderItemDTO {
   productId: string;

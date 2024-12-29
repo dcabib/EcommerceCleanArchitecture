@@ -169,7 +169,10 @@ export class Product {
       this._categoryId,
       this._currentPrice,
       [...this._discountIds],
-      this._reviews.map(review => ({ ...review })),
+      this._reviews.map(review => ({ 
+        ...review,
+        reviewDate: new Date(review.reviewDate)
+      })),
       this._averageRating
     );
   }

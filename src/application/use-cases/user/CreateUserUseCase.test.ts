@@ -1,7 +1,7 @@
 import { CreateUserUseCase, CreateUserDTO } from './CreateUserUseCase';
-import { IUserRepository } from '../../../domain/user-management/repositories/IUserRepository';
+import { IUserRepository } from '../../../domain/user/repositories/IUserRepository';
 import { IPasswordHasher } from '../../interfaces/IPasswordHasher';
-import { User, Address } from '../../../domain/user-management/entities/User';
+import { User, Address } from '../../../domain/user/entities/User';
 
 describe('CreateUserUseCase', () => {
   // Mock implementations

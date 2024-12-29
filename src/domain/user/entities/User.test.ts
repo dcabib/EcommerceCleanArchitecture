@@ -264,8 +264,6 @@ describe('User Entity', () => {
       // Valid emails should not throw errors
       validEmails.forEach(email => {
         expect(() => {
-          console.log ("validEmails: *********: " + email);
-
           User.create(
             validUserData.userId,
             validUserData.username,
@@ -310,8 +308,6 @@ describe('User Entity', () => {
       // Invalid emails should throw errors
       invalidEmailsWithoutNull.forEach(email => {
         expect(() => {
-          console.log ("invalidEmailsWithoutNull *********: " + email);
-
           User.create(
             validUserData.userId,
             validUserData.username,

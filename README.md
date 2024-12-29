@@ -1,133 +1,122 @@
 # E-commerce Clean Architecture
 
-A robust e-commerce application built using Clean Architecture principles in TypeScript, emphasizing modularity, testability, and maintainability.
+A TypeScript implementation of an e-commerce system using Clean Architecture principles. This project demonstrates domain-driven design, separation of concerns, and test-driven development.
 
 ## Architecture Overview
 
+The project follows Clean Architecture principles, organizing code into concentric layers:
+
 ```
-┌──────────────────────────────────────────────────────────┐
-│                     Presentation Layer                    │
-│                   (Controllers/Views/UI)                  │
-├──────────────────────────────────────────────────────────┤
-│                    Application Layer                      │
-│                       (Use Cases)                         │
-├──────────────────────────────────────────────────────────┤
-│                      Domain Layer                         │
-│                (Entities/Repositories)                    │
-├──────────────────────────────────────────────────────────┤
-│                  Infrastructure Layer                     │
-│              (Frameworks/Databases/External)              │
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│              Interface               │
+│  (Controllers, Views, CLI, etc.)     │
+├──────────────────────────────────────┤
+│            Application              │
+│  (Use Cases, DTOs, Interfaces)      │
+├──────────────────────────────────────┤
+│              Domain                 │
+│  (Entities, Value Objects, Rules)    │
+├──────────────────────────────────────┤
+│           Infrastructure            │
+│  (Frameworks, Databases, External)   │
+└──────────────────────────────────────┘
 ```
 
-## Core Domains
+### Key Principles
 
-### 1. User Management
-- **Entities**: User, Role
-- **Use Cases**: CreateUserUseCase
-- **Repositories**: IUserRepository
-- **Key Features**: User authentication, authorization, role management
+- **Independence of Frameworks**: The business logic is independent of external frameworks
+- **Testability**: Business rules can be tested without external elements
+- **Independence of UI**: The UI can change without changing the business rules
+- **Independence of Database**: Business rules are not bound to a specific database
+- **Independence of External Agency**: Business rules don't know anything about the outside world
 
-### 2. Product Catalog
-- **Entities**: Product, Category
-- **Use Cases**: CreateProductUseCase
-- **Repositories**: IProductRepository
-- **Key Features**: Product management, categorization
+## Domain Entities
 
-### 3. Order Processing
-- **Entities**: Order
-- **Use Cases**: CreateOrderUseCase
-- **Repositories**: IOrderRepository
-- **Key Features**: Order creation, management
+### Core Entities and Relationships
 
-### 4. Payment Processing
-- **Entities**: Payment
-- **Key Features**: Payment handling, transaction management
+```
+┌─────────────┐     ┌──────────┐     ┌────────────┐
+│    User     │     │  Order   │     │  Product   │
+├─────────────┤     ├──────────┤     ├────────────┤
+│ - userId    │     │- orderId │     │- productId │
+│ - username  │     │- userId  │     │- name      │
+│ - email     │     │- items   │     │- price     │
+│ - addresses │     │- status  │     │- category  │
+└─────────────┘     └──────────┘     └────────────┘
+       │                 │                  │
+       │                 │                  │
+       │          ┌──────────────┐         │
+       └──────────│  OrderItem   │─────────┘
+                 ├──────────────┤
+                 │- orderItemId │
+                 │- productId   │
+                 │- quantity    │
+                 │- warehouseId │
+                 └──────────────┘
+                        │
+                 ┌──────────────┐
+                 │  Warehouse   │
+                 ├──────────────┤
+                 │- warehouseId │
+                 │- location    │
+                 │- capacity    │
+                 └──────────────┘
+```
 
-### 5. Shipment Delivery
-- **Entities**: Shipment
-- **Key Features**: Shipment tracking, delivery management
+### Entity Details
 
-### 6. Warehouse Management
-- **Entities**: Warehouse, ProductWarehouseStock
-- **Key Features**: Inventory management, stock tracking
+#### User
+- Manages customer and admin accounts
+- Handles multiple shipping addresses
+- Validates email format
+- Supports role-based access (Customer/Admin)
+
+#### Product
+- Manages product information and pricing
+- Supports product categories
+- Handles product reviews and ratings
+- Manages product discounts
+
+#### Order
+- Processes customer orders
+- Manages order status lifecycle
+- Handles order-level and item-level discounts
+- Validates order modifications
+- Calculates order totals
+
+#### Warehouse
+- Manages multiple warehouse locations
+- Tracks product inventory
+- Handles stock allocation
+
+#### ProductWarehouseStock
+- Manages product inventory across warehouses
+- Tracks stock levels
+- Prevents negative inventory
 
 ## Business Rules
 
+### Order Management
+1. Orders must contain at least one item
+2. Order discount cannot exceed total amount
+3. Items can only be modified in 'Pending' status
+4. Valid order status transitions:
+   - Pending → Confirmed/Cancelled
+   - Confirmed → Processing/Cancelled
+   - Processing → Shipped/Cancelled
+   - Shipped → Delivered/Cancelled
+   - Delivered/Cancelled → (no further transitions)
+
+### Inventory Management
+1. Product stock cannot be negative
+2. Each product can have stock in multiple warehouses
+3. Stock removal requires sufficient quantity
+
 ### User Management
-- Users must have a unique email address
-- Passwords must be at least 8 characters long with a mix of letters, numbers, and symbols
-- User roles determine access levels and permissions
-- Users can have multiple roles
-- Admin role has full system access
-- Customer role has limited access to order management and profile updates
-
-### Product Catalog
-- Products must have a unique SKU
-- Product price cannot be negative
-- Products must belong to at least one category
-- Product stock levels must be non-negative
-- Products can be marked as active/inactive
-- Categories can have subcategories up to 3 levels deep
-
-### Order Processing
-- Orders must be associated with a registered user
-- Order total must be calculated from product prices and quantities
-- Orders cannot contain out-of-stock products
-- Orders must have a valid shipping address
-- Order status transitions must follow defined workflow:
-  1. Created → Pending Payment
-  2. Pending Payment → Paid/Cancelled
-  3. Paid → Processing
-  4. Processing → Shipped/Cancelled
-  5. Shipped → Delivered
-
-### Payment Processing
-- Payment amount must match order total
-- Payment status must be tracked (Pending, Completed, Failed, Refunded)
-- Failed payments must trigger order status update
-- Refunds can only be processed for completed payments
-- Payment methods must be validated before processing
-
-### Shipment Delivery
-- Shipment must be linked to a paid order
-- Shipping address must be validated
-- Tracking number must be generated for each shipment
-- Delivery updates must be logged with timestamps
-- Multiple shipments can be created for a single order
-- Shipping rates must be calculated based on:
-  - Package weight
-  - Delivery distance
-  - Shipping method
-
-### Warehouse Management
-- Each product must be assigned to at least one warehouse
-- Stock levels must be updated in real-time
-- Low stock alerts must be triggered at defined thresholds
-- Stock transfers between warehouses must be tracked
-- Stock counts must be reconciled periodically
-- FIFO (First In, First Out) principle for perishable items
-- Minimum and maximum stock levels must be maintained
-
-## Entity Relationships
-
-```
-┌─────────┐     ┌─────────┐     ┌──────────┐
-│  User   │────▶│  Order  │────▶│  Payment  │
-└─────────┘     └─────────┘     └──────────┘
-     │              │                 │
-     │              │                 │
-     ▼              ▼                 ▼
-┌─────────┐     ┌─────────┐     ┌──────────┐
-│ Product │────▶│Shipment │────▶│ Warehouse │
-└─────────┘     └─────────┘     └──────────┘
-     │
-     │
-     ▼
-┌─────────┐
-│Category │
-└─────────┘
-```
+1. Email addresses must be valid
+2. Users can have multiple shipping addresses
+3. Users must have a billing address
+4. Supports Customer and Admin roles
 
 ## Project Structure
 
@@ -137,155 +126,86 @@ src/
 │   ├── interfaces/
 │   │   └── IPasswordHasher.ts
 │   └── use-cases/
-│       ├── order-processing/
-│       ├── product-catalog/
-│       └── user-management/
+│       ├── order/
+│       ├── product/
+│       └── user/
 ├── domain/
-│   ├── order-processing/
-│   ├── payment-processing/
-│   ├── product-catalog/
-│   ├── shipment-delivery/
-│   ├── user-management/
-│   └── warehouse-management/
-└── infrastructure/ (to be implemented)
-    ├── database/
-    ├── external-services/
-    └── web/
+│   ├── order/
+│   │   ├── entities/
+│   │   └── repositories/
+│   ├── product/
+│   │   ├── entities/
+│   │   └── repositories/
+│   ├── user/
+│   │   ├── entities/
+│   │   └── repositories/
+│   └── warehouse/
+│       └── entities/
+└── infrastructure/
+    ├── persistence/
+    └── services/
 ```
 
-## Testing
+## Testing Approach
 
-The project uses Jest for testing and maintains high test coverage across all domains.
+The project follows Test-Driven Development (TDD) principles:
 
-### Test Structure
-- Unit tests for all entities
-- Integration tests for use cases
-- Repository interface tests
-- Coverage reports available in `/coverage`
+1. **Unit Tests**: Testing individual entities and their business rules
+2. **Integration Tests**: Testing use cases and their interactions
+3. **Repository Tests**: Testing data persistence operations
 
-### Running Tests
-```bash
-npm test          # Run all tests
-npm run test:cov  # Run tests with coverage
-```
+### Test Examples
 
-### Test Coverage
+- Order entity tests validate:
+  - Order creation rules
+  - Discount calculations
+  - Status transitions
+  - Item modifications
+  - Total calculations
 
-Current test coverage metrics:
-
-| Module                                | Statements | Branches | Functions | Lines | Uncovered Lines |
-|---------------------------------------|------------|----------|-----------|--------|----------------|
-| **Application Layer**                 |            |          |          |        |                |
-| order-processing/CreateOrderUseCase   | 97.05%     | 83.33%   | 100%     | 97.05% | 77            |
-| product-catalog/CreateProductUseCase  | 100%       | 100%     | 100%     | 100%   | -             |
-| user-management/CreateUserUseCase     | 100%       | 100%     | 100%     | 100%   | -             |
-| **Domain Layer**                      |            |          |          |        |                |
-| order-processing/Order                | 95.74%     | 76.47%   | 100%     | 95.5%  | 36,128,150,237|
-| payment-processing/Payment            | 100%       | 100%     | 100%     | 100%   | -             |
-| product-catalog/Category              | 100%       | 100%     | 100%     | 100%   | -             |
-| product-catalog/Product               | 92.06%     | 77.27%   | 100%     | 100%   | 43-44,101-106,116|
-| shipment-delivery/Shipment            | 87.93%     | 61.9%    | 100%     | 97.77% | 98            |
-| user-management/Role                  | 100%       | 100%     | 100%     | 100%   | -             |
-| user-management/User                  | 75.86%     | 55%      | 85.71%   | 88.88% | 95-96,105-106,146|
-| warehouse-management/ProductWarehouseStock | 100%   | 100%     | 100%     | 100%   | -             |
-| warehouse-management/Warehouse        | 89.79%     | 70.58%   | 100%     | 100%   | 60,62-65      |
-
-**Overall Coverage: 92.42%**
-
-Areas needing improvement:
-1. User management - User entity needs better branch coverage
-2. Shipment delivery - Shipment entity requires better branch coverage
-3. Order processing - Order entity has some uncovered edge cases
-4. Warehouse management - Warehouse entity needs better branch coverage
-
-Action items:
-- Add test cases for uncovered lines in User.ts
-- Improve branch coverage in Shipment.ts
-- Add edge case tests for Order.ts
-- Enhance test coverage for Warehouse.ts branch conditions
-
-## Technical Details
-
-### Domain Layer
-- Contains business logic and rules
-- Pure TypeScript with no external dependencies
-- Includes entities, value objects, and repository interfaces
-- Implements domain events and aggregates
-
-### Application Layer
-- Implements use cases
-- Orchestrates domain objects
-- Handles business operations
-- Manages transactions
-
-### Infrastructure Layer (To Be Implemented)
-- Will contain implementations of repositories
-- Database access and external service integrations
-- Framework-specific code
-- API implementations
+- User entity tests verify:
+  - User creation validation
+  - Email format validation
+  - Address management
+  - Role assignments
 
 ## Setup and Installation
 
 1. Clone the repository
-```bash
-git clone [repository-url]
-cd ecommerce-clean-architecture
-```
-
-2. Install dependencies
-```bash
-npm install
-```
-
-3. Run tests
-```bash
-npm test
-```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Run tests:
+   ```bash
+   npm test
+   ```
+4. Build the project:
+   ```bash
+   npm run build
+   ```
 
 ## Development Guidelines
 
-1. **Clean Architecture Principles**
-   - Dependencies point inward
-   - Domain layer has no external dependencies
-   - Use interfaces for external services
+1. Follow TDD approach
+2. Keep entities pure and framework-independent
+3. Use value objects for complex value types
+4. Implement repository interfaces for data access
+5. Use use cases for business operations
+6. Validate business rules at the domain level
 
-2. **Testing**
-   - Write tests before implementation
-   - Maintain high test coverage
-   - Use meaningful test descriptions
+## Error Handling
 
-3. **Code Organization**
-   - Follow domain-driven design principles
-   - Keep modules focused and cohesive
-   - Use clear naming conventions
+- Domain entities throw errors for business rule violations
+- Use cases handle errors and translate to appropriate responses
+- Repository implementations handle data access errors
+- All errors include meaningful messages for debugging
 
 ## Future Enhancements
 
-1. Infrastructure Layer Implementation
-   - Database integration
-   - External service connections
-   - API endpoints
-
-2. Additional Features
-   - Shopping cart management
-   - Discount system
-   - Review system
-   - Analytics integration
-
-3. Technical Improvements
-   - API documentation
-   - Performance monitoring
-   - Logging system
-   - CI/CD pipeline
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-
-[License Type] - See LICENSE file for details
+1. Implement payment processing
+2. Add order fulfillment system
+3. Implement inventory optimization
+4. Add real-time stock updates
+5. Implement advanced discount rules
+6. Add product recommendation system

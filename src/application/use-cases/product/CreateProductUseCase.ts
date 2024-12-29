@@ -1,5 +1,5 @@
-import { Product } from '../../../domain/product-catalog/entities/Product';
-import { IProductRepository } from '../../../domain/product-catalog/repositories/IProductRepository';
+import { Product } from '../../../domain/product/entities/Product';
+import { IProductRepository } from '../../../domain/product/repositories/IProductRepository';
 
 export interface CreateProductDTO {
   name: string;
@@ -20,7 +20,7 @@ export interface CreateProductResponseDTO {
   averageRating: number;
 }
 
-import { Review } from '../../../domain/product-catalog/entities/Product';
+import { Review } from '../../../domain/product/entities/Product';
 
 export class CreateProductUseCase {
   constructor(

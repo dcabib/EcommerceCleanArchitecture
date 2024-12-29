@@ -1,5 +1,5 @@
-import { User, Address, UserRole } from '../../../domain/user-management/entities/User';
-import { IUserRepository } from '../../../domain/user-management/repositories/IUserRepository';
+import { User, Address, UserRole } from '../../../domain/user/entities/User';
+import { IUserRepository } from '../../../domain/user/repositories/IUserRepository';
 import { IPasswordHasher } from '../../interfaces/IPasswordHasher';
 
 export interface CreateUserDTO {

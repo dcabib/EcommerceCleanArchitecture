@@ -1,10 +1,10 @@
 import { CreateOrderUseCase, CreateOrderDTO, OrderItemDTO } from './CreateOrderUseCase';
-import { IOrderRepository } from '../../../domain/order-processing/repositories/IOrderRepository';
-import { IUserRepository } from '../../../domain/user-management/repositories/IUserRepository';
-import { IProductRepository } from '../../../domain/product-catalog/repositories/IProductRepository';
-import { Order, OrderStatus } from '../../../domain/order-processing/entities/Order';
-import { User } from '../../../domain/user-management/entities/User';
-import { Product } from '../../../domain/product-catalog/entities/Product';
+import { IOrderRepository } from '../../../domain/order/repositories/IOrderRepository';
+import { IUserRepository } from '../../../domain/user/repositories/IUserRepository';
+import { IProductRepository } from '../../../domain/product/repositories/IProductRepository';
+import { Order, OrderStatus } from '../../../domain/order/entities/Order';
+import { User } from '../../../domain/user/entities/User';
+import { Product } from '../../../domain/product/entities/Product';
 
 describe('CreateOrderUseCase', () => {
   // Mock implementations

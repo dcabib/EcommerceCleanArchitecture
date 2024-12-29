@@ -97,6 +97,30 @@ describe('Shipment Entity', () => {
       expect(shipment.status).toBe('InTransit');
     });
 
+    it('should throw error when marking as in transit from non-Pending status', () => {
+      shipment.markAsInTransit();
+      expect(() => {
+        shipment.markAsInTransit();
+      }).toThrow('Cannot mark as in transit from InTransit status');
+
+      shipment.markAsDelivered(validDelivery);
+      expect(() => {
+        shipment.markAsInTransit();
+      }).toThrow('Cannot mark as in transit from Delivered status');
+
+      const failedShipment = Shipment.create(
+        'ship-456',
+        validShipmentData.orderId,
+        validShipmentData.expectedDeliveryDate,
+        validShipmentData.trackingNumber,
+        validShipmentData.carrier
+      );
+      failedShipment.markAsFailed();
+      expect(() => {
+        failedShipment.markAsInTransit();
+      }).toThrow('Cannot mark as in transit from Failed status');
+    });
+
     it('should mark as delivered', () => {
       shipment.markAsInTransit();
       shipment.markAsDelivered(validDelivery);
@@ -111,6 +135,31 @@ describe('Shipment Entity', () => {
       shipment.markAsInTransit();
       shipment.markAsFailed();
       expect(shipment.status).toBe('Failed');
+    });
+
+    it('should allow marking as failed from different states', () => {
+      // From Pending
+      const pendingShipment = Shipment.create(
+        'ship-456',
+        validShipmentData.orderId,
+        validShipmentData.expectedDeliveryDate,
+        validShipmentData.trackingNumber,
+        validShipmentData.carrier
+      );
+      pendingShipment.markAsFailed();
+      expect(pendingShipment.status).toBe('Failed');
+
+      // From InTransit
+      const inTransitShipment = Shipment.create(
+        'ship-789',
+        validShipmentData.orderId,
+        validShipmentData.expectedDeliveryDate,
+        validShipmentData.trackingNumber,
+        validShipmentData.carrier
+      );
+      inTransitShipment.markAsInTransit();
+      inTransitShipment.markAsFailed();
+      expect(inTransitShipment.status).toBe('Failed');
     });
 
     it('should throw error for invalid status transitions', () => {
@@ -129,6 +178,14 @@ describe('Shipment Entity', () => {
     it('should throw error for invalid delivery data', () => {
       shipment.markAsInTransit();
 
+      // Test all delivery validation cases
+      expect(() => {
+        shipment.markAsDelivered({
+          ...validDelivery,
+          deliveryDate: null as any
+        });
+      }).toThrow('Delivery date is required');
+
       expect(() => {
         shipment.markAsDelivered({
           ...validDelivery,
@@ -139,12 +196,59 @@ describe('Shipment Entity', () => {
       expect(() => {
         shipment.markAsDelivered({
           ...validDelivery,
+          deliveryAddress: null as any
+        });
+      }).toThrow('Delivery address is required');
+
+      expect(() => {
+        shipment.markAsDelivered({
+          ...validDelivery,
           deliveryAddress: {
             ...validDeliveryAddress,
             street: ''
           }
         });
       }).toThrow('Street is required');
+
+      expect(() => {
+        shipment.markAsDelivered({
+          ...validDelivery,
+          deliveryAddress: {
+            ...validDeliveryAddress,
+            city: ''
+          }
+        });
+      }).toThrow('City is required');
+
+      expect(() => {
+        shipment.markAsDelivered({
+          ...validDelivery,
+          deliveryAddress: {
+            ...validDeliveryAddress,
+            state: ''
+          }
+        });
+      }).toThrow('State is required');
+
+      expect(() => {
+        shipment.markAsDelivered({
+          ...validDelivery,
+          deliveryAddress: {
+            ...validDeliveryAddress,
+            postalCode: ''
+          }
+        });
+      }).toThrow('Postal code is required');
+
+      expect(() => {
+        shipment.markAsDelivered({
+          ...validDelivery,
+          deliveryAddress: {
+            ...validDeliveryAddress,
+            country: ''
+          }
+        });
+      }).toThrow('Country is required');
     });
   });
 
