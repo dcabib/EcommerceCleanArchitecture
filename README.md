@@ -169,6 +169,41 @@ npm test          # Run all tests
 npm run test:cov  # Run tests with coverage
 ```
 
+### Test Coverage
+
+Current test coverage metrics:
+
+| Module                                | Statements | Branches | Functions | Lines | Uncovered Lines |
+|---------------------------------------|------------|----------|-----------|--------|----------------|
+| **Application Layer**                 |            |          |          |        |                |
+| order-processing/CreateOrderUseCase   | 97.05%     | 83.33%   | 100%     | 97.05% | 77            |
+| product-catalog/CreateProductUseCase  | 100%       | 100%     | 100%     | 100%   | -             |
+| user-management/CreateUserUseCase     | 100%       | 100%     | 100%     | 100%   | -             |
+| **Domain Layer**                      |            |          |          |        |                |
+| order-processing/Order                | 95.74%     | 76.47%   | 100%     | 95.5%  | 36,128,150,237|
+| payment-processing/Payment            | 100%       | 100%     | 100%     | 100%   | -             |
+| product-catalog/Category              | 100%       | 100%     | 100%     | 100%   | -             |
+| product-catalog/Product               | 92.06%     | 77.27%   | 100%     | 100%   | 43-44,101-106,116|
+| shipment-delivery/Shipment            | 87.93%     | 61.9%    | 100%     | 97.77% | 98            |
+| user-management/Role                  | 100%       | 100%     | 100%     | 100%   | -             |
+| user-management/User                  | 75.86%     | 55%      | 85.71%   | 88.88% | 95-96,105-106,146|
+| warehouse-management/ProductWarehouseStock | 100%   | 100%     | 100%     | 100%   | -             |
+| warehouse-management/Warehouse        | 89.79%     | 70.58%   | 100%     | 100%   | 60,62-65      |
+
+**Overall Coverage: 92.42%**
+
+Areas needing improvement:
+1. User management - User entity needs better branch coverage
+2. Shipment delivery - Shipment entity requires better branch coverage
+3. Order processing - Order entity has some uncovered edge cases
+4. Warehouse management - Warehouse entity needs better branch coverage
+
+Action items:
+- Add test cases for uncovered lines in User.ts
+- Improve branch coverage in Shipment.ts
+- Add edge case tests for Order.ts
+- Enhance test coverage for Warehouse.ts branch conditions
+
 ## Technical Details
 
 ### Domain Layer
