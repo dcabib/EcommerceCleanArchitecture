@@ -1,0 +1,194 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Aurora Serverless PostgreSQL for E-commerce Clean Architecture
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment name
+
+  VpcId:
+    Type: String
+    Description: VPC ID where the Aurora cluster will be deployed
+
+  VpcCIDR:
+    Type: String
+    Description: VPC CIDR block
+
+Resources:
+  # Security Group for Aurora
+  AuroraSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      GroupDescription: Security group for Aurora PostgreSQL cluster
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: !Ref VpcCIDR
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-aurora-sg
+
+  # Subnet Group for Aurora
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Aurora PostgreSQL cluster
+      SubnetIds: 
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-aurora-subnet-group
+
+  # Private Subnets
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Select [4, !Cidr [!Ref VpcCIDR, 6, 8]]
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-aurora-private-subnet-1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Select [5, !Cidr [!Ref VpcCIDR, 6, 8]]
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-aurora-private-subnet-2
+
+  # Route Tables for Private Subnets
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-aurora-private-rt-1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-aurora-private-rt-2
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
+
+  # Secret for Aurora credentials
+  AuroraSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !Join 
+        - '-'
+        - - !Ref Environment
+          - 'aurora'
+          - !Select [2, !Split ["/", !Ref "AWS::StackId"]]
+          - 'credentials'
+      Description: Aurora database credentials
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "ecommerceadmin"}'
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        ExcludeCharacters: "@\"'\\"
+
+  # Aurora Serverless Cluster
+  AuroraCluster:
+    Type: AWS::RDS::DBCluster
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BackupRetentionPeriod: 1
+      Engine: aurora-postgresql
+      EngineMode: serverless
+      EngineVersion: 13.9
+      DatabaseName: ecommerce
+      MasterUsername: !Sub '{{resolve:secretsmanager:${AuroraSecret}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${AuroraSecret}:SecretString:password}}'
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref AuroraSecurityGroup
+      EnableHttpEndpoint: true
+      ScalingConfiguration:
+        AutoPause: true
+        MinCapacity: 2
+        MaxCapacity: 8
+        SecondsUntilAutoPause: 300
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Initial Database Schema
+  AuroraDBSchema:
+    Type: AWS::RDS::DBClusterParameterGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Family: aurora-postgresql13
+      Description: Parameter group for Aurora PostgreSQL cluster
+      Parameters:
+        shared_preload_libraries: 'auto_explain,pg_stat_statements'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  ClusterEndpoint:
+    Description: Aurora Cluster Endpoint
+    Value: !GetAtt AuroraCluster.Endpoint.Address
+    Export:
+      Name: !Sub ${Environment}-aurora-endpoint
+
+  ClusterPort:
+    Description: Aurora Cluster Port
+    Value: !GetAtt AuroraCluster.Endpoint.Port
+    Export:
+      Name: !Sub ${Environment}-aurora-port
+
+  SecretARN:
+    Description: Secret ARN for database credentials
+    Value: !Ref AuroraSecret
+    Export:
+      Name: !Sub ${Environment}-aurora-secret-arn
+
+  SecurityGroupId:
+    Description: Security Group ID for Aurora
+    Value: !Ref AuroraSecurityGroup
+    Export:
+      Name: !Sub ${Environment}-aurora-security-group-id

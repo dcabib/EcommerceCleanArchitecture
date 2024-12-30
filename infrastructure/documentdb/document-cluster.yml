@@ -1,0 +1,194 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: DocumentDB Cluster for E-commerce Clean Architecture
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment name
+
+  VpcId:
+    Type: String
+    Description: VPC ID where the DocumentDB cluster will be deployed
+
+  VpcCIDR:
+    Type: String
+    Description: VPC CIDR block
+
+Resources:
+  # Security Group for DocumentDB
+  DocumentDBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      GroupDescription: Security group for DocumentDB cluster
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 27017
+          ToPort: 27017
+          CidrIp: !Ref VpcCIDR
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-docdb-sg
+
+  # Subnet Group for DocumentDB
+  DocumentDBSubnetGroup:
+    Type: AWS::DocDB::DBSubnetGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DBSubnetGroupDescription: Subnet group for DocumentDB cluster
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-docdb-subnet-group
+
+  # Private Subnets
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Select [2, !Cidr [!Ref VpcCIDR, 6, 8]]
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-docdb-private-subnet-1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Select [3, !Cidr [!Ref VpcCIDR, 6, 8]]
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-docdb-private-subnet-2
+
+  # Route Tables for Private Subnets
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-docdb-private-rt-1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment}-docdb-private-rt-2
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
+
+  # Secret for DocumentDB credentials
+  DocumentDBSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !Join 
+        - '-'
+        - - !Ref Environment
+          - 'docdb'
+          - !Select [2, !Split ["/", !Ref "AWS::StackId"]]
+          - 'credentials'
+      Description: DocumentDB database credentials
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "ecommerceadmin"}'
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        ExcludeCharacters: "@\"'\\"
+
+  # DocumentDB Cluster
+  DocumentDBCluster:
+    Type: AWS::DocDB::DBCluster
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DocumentDBSecret}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DocumentDBSecret}:SecretString:password}}'
+      DBSubnetGroupName: !Ref DocumentDBSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref DocumentDBSecurityGroup
+      DeletionProtection: false
+      BackupRetentionPeriod: 1
+      PreferredBackupWindow: 02:00-03:00
+      PreferredMaintenanceWindow: Mon:03:00-Mon:04:00
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  # DocumentDB Instance
+  DocumentDBInstance:
+    Type: AWS::DocDB::DBInstance
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      DBClusterIdentifier: !Ref DocumentDBCluster
+      DBInstanceClass: db.t3.medium
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Parameter Group
+  DocumentDBClusterParameterGroup:
+    Type: AWS::DocDB::DBClusterParameterGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Description: Parameter group for DocumentDB cluster
+      Family: docdb4.0
+      Parameters:
+        audit_logs: enabled
+        tls: enabled
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  ClusterEndpoint:
+    Description: DocumentDB Cluster Endpoint
+    Value: !GetAtt DocumentDBCluster.Endpoint
+    Export:
+      Name: !Sub ${Environment}-docdb-endpoint
+
+  SecretARN:
+    Description: Secret ARN for database credentials
+    Value: !Ref DocumentDBSecret
+    Export:
+      Name: !Sub ${Environment}-docdb-secret-arn
+
+  SecurityGroupId:
+    Description: Security Group ID for DocumentDB
+    Value: !Ref DocumentDBSecurityGroup
+    Export:
+      Name: !Sub ${Environment}-docdb-security-group-id
