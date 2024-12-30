@@ -1,4 +1,7 @@
-import { CreateUserUseCase, CreateUserDTO } from './CreateUserUseCase';
+import { CreateUserUseCase } from './CreateUserUseCase';
+import { CreateUserDTO } from '../../interfaces/ICreateUserUseCase';
+import { UserAlreadyExistsError, InvalidUserDataError } from '../../../domain/user/errors/UserErrors';
+import { USER_CONSTANTS } from '../../../domain/user/types/UserTypes';
 import { IUserRepository } from '../../../domain/user/repositories/IUserRepository';
 import { IPasswordHasher } from '../../interfaces/IPasswordHasher';
 import { User, Address } from '../../../domain/user/entities/User';
@@ -95,7 +98,7 @@ describe('CreateUserUseCase', () => {
   const validCreateUserDTO: CreateUserDTO = {
     username: 'johndoe',
     email: 'john@example.com',
-    password: 'password123',
+    password: 'Password123!',
     billingAddress: validAddress,
     phoneNumber: '1234567890'
   };
@@ -132,7 +135,7 @@ describe('CreateUserUseCase', () => {
     // Try to create another user with the same email
     await expect(useCase.execute(validCreateUserDTO))
       .rejects
-      .toThrow('User with this email or username already exists');
+      .toThrow(UserAlreadyExistsError);
   });
 
   it('should throw error if user with username already exists', async () => {
@@ -147,7 +150,7 @@ describe('CreateUserUseCase', () => {
 
     await expect(useCase.execute(duplicateUsername))
       .rejects
-      .toThrow('User with this email or username already exists');
+      .toThrow(UserAlreadyExistsError);
   });
 
   it('should create user with custom role', async () => {
@@ -178,5 +181,90 @@ describe('CreateUserUseCase', () => {
     
     expect(spy).toHaveBeenCalledWith(validCreateUserDTO.password);
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  describe('Validation Tests', () => {
+    it('should throw error for invalid email format', async () => {
+      const invalidEmail = {
+        ...validCreateUserDTO,
+        email: 'invalid-email'
+      };
+
+      await expect(useCase.execute(invalidEmail))
+        .rejects
+        .toThrow(InvalidUserDataError);
+    });
+
+    it('should throw error for invalid phone number', async () => {
+      const invalidPhone = {
+        ...validCreateUserDTO,
+        phoneNumber: '123'
+      };
+
+      await expect(useCase.execute(invalidPhone))
+        .rejects
+        .toThrow(InvalidUserDataError);
+    });
+
+    it('should throw error for weak password', async () => {
+      const weakPassword = {
+        ...validCreateUserDTO,
+        password: 'weak'
+      };
+
+      await expect(useCase.execute(weakPassword))
+        .rejects
+        .toThrow(InvalidUserDataError);
+    });
+
+    it('should throw error for username too short', async () => {
+      const shortUsername = {
+        ...validCreateUserDTO,
+        username: 'a'
+      };
+
+      await expect(useCase.execute(shortUsername))
+        .rejects
+        .toThrow(InvalidUserDataError);
+    });
+
+    it('should throw error for username too long', async () => {
+      const longUsername = {
+        ...validCreateUserDTO,
+        username: 'a'.repeat(USER_CONSTANTS.VALIDATION.USERNAME_MAX_LENGTH + 1)
+      };
+
+      await expect(useCase.execute(longUsername))
+        .rejects
+        .toThrow(InvalidUserDataError);
+    });
+
+    it('should throw error for incomplete billing address', async () => {
+      const incompleteAddress = {
+        ...validCreateUserDTO,
+        billingAddress: {
+          ...validAddress,
+          street: '' // Missing required field
+        }
+      };
+
+      await expect(useCase.execute(incompleteAddress))
+        .rejects
+        .toThrow(InvalidUserDataError);
+    });
+
+    it('should throw error for incomplete shipping address', async () => {
+      const incompleteShippingAddress = {
+        ...validCreateUserDTO,
+        shippingAddresses: [{
+          ...validAddress,
+          city: '' // Missing required field
+        }]
+      };
+
+      await expect(useCase.execute(incompleteShippingAddress))
+        .rejects
+        .toThrow(InvalidUserDataError);
+    });
   });
 });
